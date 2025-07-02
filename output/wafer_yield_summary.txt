@@ -1,0 +1,3 @@
+Total Chips: 13
+PASS (BIN=1): 1
+Yield Rate: 7.69%
