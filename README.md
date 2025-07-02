@@ -96,12 +96,6 @@ java WaferMapGenerator
 - 匯出良率報告 `.txt`
 - 匯出兩張彩圖：`PART_ID` 以及 `BIN` 為基礎的晶圓圖
 
----
 
-### 聯絡與貢獻
-```
-作者 / Author: 張婷佳 (Jessie Chang)
-Email: tingchaaa@gmail.com
-```
 
 
