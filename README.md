@@ -1,101 +1,167 @@
+# STDF Wafer Map Analysis Tool
 
-# STDF Wafer Map Generator (Java)
-
-本專案可將 `.out` 格式的 STDF 測試結果轉為 `.csv`，並根據 X/Y 座標繪製晶圓圖、統計良率，並輸出結果（文字報告與彩圖）。
-
----
-
-### 專案結構
-
-```
-stdf_java_project/
-├── lib/
-│   └── StdfDump.jar         # 官方提供的 STDF 解碼工具
-├── unpacked/
-│   └── *.out                # 用 StdfDump 解碼後的輸出文字檔
-├── src/
-│   ├── StdfOutToCsv.java    # 將 out 檔轉為 csv
-│   └── WaferMapGenerator.java # 輸出圖像、統計良率
-├── converted.csv            # 中介 CSV 檔
-└── output/
-    ├── wafer_map_part_id.png
-    ├── wafer_map_bin.png
-    └── wafer_yield_summary.txt
-```
+本工具用於解析 STDF 測試檔案，從中擷取所有晶粒的座標與編號資訊，並繪製 Wafer Map。可自動計算良率並匯出對應圖表與 Excel 結果。
 
 ---
 
-### 使用步驟
+### 資料夾結構
 
-#### step1  將 `.stdf` 檔轉為 `.out`
-請先使用 STDF 工具列印 STDF 結構至純文字格式：
+```
+HW/
+├── README.md                      # 使用說明文件（Markdown）
+├── README.pdf                     # 使用說明文件（PDF）
+├── scripts/                       # 自行撰寫之主程式與工具腳本
+│   ├── unpack_and_prepare.py      # 解壓 .tar.gz 檔案
+│   └── main.py                    # 主程式：Wafer Map 與良率統計
+├── input/                         # 經轉換後之 STDF 文字檔（output.txt）
+├── output/                        # Wafer Map 圖片與良率統計資料
+├── unpacked/                      # 原始 STDF 檔案解壓後資料
+├── reference/                     # 參考資料
+└── pystdf-master/                 # 第三方 STDF 解析套件
+```
+
+
+### 程式檔案用途與執行說明
+
+| 檔案名稱                | 位置                        | 功能說明                                                      |
+|-------------------------|-----------------------------|---------------------------------------------------------------|
+| `unpack_and_prepare.py` | `./scripts/`                | 解壓 `.tar.gz` 檔案並展開為 `.std`，輸出至 `./unpacked/`       |
+| `stdf2text.py`          | `./pystdf-master/.../`      | 將 `.std` 轉為純文字格式 `.txt`，輸出至 `./input/output.txt` |
+| `main.py`               | `./scripts/`                | 主程式，產出 Wafer Map 圖與良率統計檔案                       |
+
+### 執行順序
 
 ```bash
-java -cp lib/StdfDump.jar ri.core.stdf.StdfDump unpacked/main_Lot_1_Wafer_1_Oct_13_09h33m41s_STDF
+# Step 1: 解壓 STDF 壓縮檔
+python scripts/unpack_and_prepare.py
+
+# Step 2: 將 .std 轉為文字格式
+python pystdf-master/pystdf/scripts/stdf2text.py ./unpacked/main_Lot_1_Wafer_1_Oct_13_09h33m41s_STDF > ./input/output.txt
+
+# Step 3: 執行主程式分析與繪圖
+python scripts/main.py
 ```
 
-執行後會產出 `.out` 檔案，例如：
+<div style="page-break-after: always;"></div>
+
+## 資料處理流程
+
+### Step 1 & 2：解壓 .tar.gz 並展開 .tar 檔案
+
+> 題目提供的檔案為 main_Lot_1_Wafer_1_Oct_13_09h33m41s_STDF.tar.gz
+實際為 .tar 格式，以下程式碼會自動完成兩階段解壓，並顯示展開結果。
+
+```python
+import gzip
+import shutil
+import tarfile
+import os
+
+# === 檔案與資料夾路徑 ===
+input_gz_path = "./main_Lot_1_Wafer_1_Oct_13_09h33m41s_STDF.tar.gz"
+intermediate_tar_path = "./temp_stdf.tar"
+unpack_dir = "./unpacked"
+
+# === Step 1: 解壓 .gz 成 .tar ===
+if not os.path.exists(input_gz_path):
+    print(f"找不到壓縮檔：{input_gz_path}")
+    exit()
+
+with gzip.open(input_gz_path, 'rb') as f_in:
+    with open(intermediate_tar_path, 'wb') as f_out:
+        shutil.copyfileobj(f_in, f_out)
+
+print(f"已解壓 .gz 成 .tar：{intermediate_tar_path}")
+
+# === Step 2: 解開 .tar 成資料夾 ===
+with tarfile.open(intermediate_tar_path, "r") as tar:
+    tar.extractall(unpack_dir)
+
+print(f"完成解壓 STDF 至：{unpack_dir}")
+
+# === Step 3: 顯示有哪些解出來的檔案 ===
+print("解壓內容：")
+for f in os.listdir(unpack_dir):
+    print("  -", f)
 
 ```
-Output saved to: unpacked/main_Lot_1_Wafer_1_Oct_13_09h33m41s_STDF.out
-```
 
+### Step 3：轉為文字格式
 
-
-#### step2 編譯並執行 Java 轉檔
+使用 [`pystdf`](https://github.com/stephentu/pystdf) 工具轉換 `.std` → `.txt`
 
 ```bash
-javac -d . src/StdfOutToCsv.java
-java StdfOutToCsv
+python pystdf-master/pystdf/scripts/stdf2text.py ./unpacked/main_Lot_1_Wafer_1_Oct_13_09h33m41s_STDF > ./input/output.txt
 ```
 
-輸出為 `converted.csv`，內容範例如下：
+<div style="page-break-after: always;"></div>
 
-```
-X,Y,PART_ID,BIN
--5,-4,1,1
--1,-4,2,1
-4,-4,3,2
-6,-4,4,1
-7,-4,5,1
-...
-```
-
-
-#### step3 產生晶圓圖與良率報告
+## 執行主程式
 
 ```bash
-javac -d . src/WaferMapGenerator.java
-java WaferMapGenerator
-```
-
-執行結果會輸出：
-
-```
---- 晶圓圖 (P: Pass, F: Fail) ---
-原始晶圓範圍: X [-7,7], Y [-4,0]
-         -7  -6  -5  -4  -3  -2  -1   0   1   2   3   4   5   6   7
-   0      .   F   .   F   .   .   .   .   .   .   .   .   .   .   .
-  -1      .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
-  -2      .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
-  -3      F   .   .   .   F   F   .   .   .   .   F   F   .   F   .
-  -4      .   .   P   .   .   .   P   .   .   .   .   F   .   F   F
-
-良率總結輸出完成： output/wafer_yield_summary.txt
-圖片已保存到: output/wafer_map_part_id.png
-圖片已保存到: output/wafer_map_bin.png
+python scripts/main.py
 ```
 
 ---
 
-### 功能說明
+## 功能與說明
 
-- 自動解析 `X, Y, PART_ID, BIN`
-- 依據座標重建晶圓格狀結構
-- 以終端機顯示文字晶圓圖（P 為 Pass、F 為 Fail）
-- 匯出良率報告 `.txt`
-- 匯出兩張彩圖：`PART_ID` 以及 `BIN` 為基礎的晶圓圖
+- 解析 STDF 檔案中所有 `PRR` 記錄
+- 擷取晶粒之：
+  - X 座標：PRR 欄位 `X_COORD`
+  - Y 座標：PRR 欄位 `Y_COORD`
+  - 晶粒編號：PRR 欄位 `PART_ID`
+  - 測試分類：PRR 欄位 `HARD_BIN`
+- 畫出 2 種 Wafer Map：
+  - `wafer_map_part_id.png`：顯示各座標之 PART_ID
+  - `wafer_map_bin.png`：依據 BIN 值分類之顏色圖
+- 自動統計良率，顯示 PASS 數與總數
 
+---
 
+## 輸出檔案說明
 
+| 檔案名稱                   | 說明                                                  |
+|----------------------------|-------------------------------------------------------|
+| `wafer_map_data.xlsx`      | 含 X, Y, PART_ID, BIN 的詳細表格                      |
+| `wafer_map_part_id.png`    | Wafer Map（以晶粒編號顯示）                          |
+| `wafer_map_bin.png`        | Wafer Map（以測試分類 BIN 顏色區分）                |
+| `wafer_yield_summary.txt`  | 良率統計摘要（總晶粒數、通過數、良率百分比）        |
+
+---
+
+## 良率計算公式
+
+- 總晶粒數：所有 PRR 記錄總筆數
+- 通過數：BIN 值為 1 者
+- 計算公式：
+
+```text
+Yield = (PASS Count / Total Chips) × 100%
+```
+---
+<div style="page-break-after: always;"></div>
+
+## 套件需求
+
+- Python 3.11
+- 套件安裝方式：
+
+```bash
+pip install pystdf pandas matplotlib numpy
+```
+
+---
+
+## 題目對應說明
+
+本專案對應題目需求如下：
+
+| 題目要求                  | 本專案對應功能                             |
+|---------------------------|---------------------------------------------|
+| 解壓 `.tar.gz`            | `gzip` + `tarfile` 處理 `.std` 來源檔       |
+| 擷取 PRR 資訊             | `tx.py` 內部解析每一筆 PRR 記錄            |
+| 提取 X, Y, PART_ID        | 儲存於 `wafer_map_data.xlsx` 並於圖片顯示  |
+| 繪製 Wafer Map            | 輸出 `wafer_map_part_id.png` 等圖          |
+| 顯示 PART_ID 於 Wafer Map | 圖中座標標註 PART_ID                        |
 
