@@ -1,82 +1,93 @@
 import struct
 import csv
 
-def read_stdf_file(filepath):
+# === Record Type/SubType 對照表 ===
+record_map = {
+    (0, 10): "FAR",   # File Attributes Record
+    (1, 10): "MIR",   # Master Information Record
+    (1, 20): "MRR",   # Master Results Record
+    (1, 30): "PCR",   # Part Count Record
+    (1, 40): "HBR",   # Hard Bin Record
+    (1, 50): "SBR",   # Soft Bin Record
+    (1, 60): "PMR",   # Pin Map Record
+    (1, 62): "PGR",   # Pin Group Record
+    (1, 70): "PLR",   # Pin Limits Record
+    (5, 10): "PTR",   # Parametric Test Record
+    (5, 20): "PRR",   # Part Results Record
+}
+
+def parse_cn(data, offset):
+    length = data[offset]
+    val = data[offset+1:offset+1+length].decode(errors="ignore")
+    return val, offset + 1 + length
+
+def parse_record(record_type, sub_type, data):
+    parsed = {"TYPE": record_map.get((record_type, sub_type), f"{record_type}:{sub_type}")}
+    try:
+        if (record_type, sub_type) == (0, 10):  # FAR
+            parsed.update({"CPU_TYPE": data[0], "STDF_VER": data[1]})
+
+        elif (record_type, sub_type) == (1, 10):  # MIR
+            tstamp = struct.unpack(">I", data[0:4])[0]
+            lot_id, _ = parse_cn(data, 28)
+            parsed.update({"TIME_STAMP": tstamp, "LOT_ID": lot_id})
+
+        elif (record_type, sub_type) == (1, 30):  # PCR
+            head_num, site_num = data[0], data[1]
+            retest_cnt = struct.unpack(">H", data[2:4])[0]
+            parsed.update({"HEAD_NUM": head_num, "SITE_NUM": site_num, "RETEST_CNT": retest_cnt})
+
+        elif (record_type, sub_type) == (1, 40):  # HBR
+            bin_num = struct.unpack(">H", data[0:2])[0]
+            bin_cnt = struct.unpack(">I", data[2:6])[0]
+            parsed.update({"BIN_NUM": bin_num, "BIN_CNT": bin_cnt})
+
+        elif (record_type, sub_type) == (5, 10):  # PTR
+            test_num = struct.unpack(">I", data[0:4])[0]
+            result = struct.unpack(">f", data[10:14])[0]
+            parsed.update({"TEST_NUM": test_num, "RESULT": result})
+
+        elif (record_type, sub_type) == (5, 20):  # PRR
+            x_coord = struct.unpack(">h", data[5:7])[0]
+            y_coord = struct.unpack(">h", data[7:9])[0]
+            part_id, offset = parse_cn(data, 13)
+            part_txt_len = data[offset]
+            offset += 1 + part_txt_len
+            soft_bin = struct.unpack(">H", data[offset:offset+2])[0]
+            parsed.update({"X_COORD": x_coord, "Y_COORD": y_coord, "PART_ID": part_id, "SOFT_BIN": soft_bin})
+    except Exception as e:
+        parsed["ERROR"] = str(e)
+    return parsed
+
+def parse_stdf(filepath, output_csv):
     with open(filepath, "rb") as f:
-        return f.read()
+        binary = f.read()
 
-def parse_stdf_records(binary_data):
     offset = 0
-    results = []
+    parsed_rows = []
+    all_fields = set()
 
-    while offset < len(binary_data):
+    while offset + 4 <= len(binary):
         try:
-            # 每筆 STDF 記錄開頭: 長度 (2B) + Record Type (1B) + Sub Type (1B)
-            reclen, rectype, recsub = struct.unpack_from("<HBB", binary_data, offset)
+            reclen, rectype, recsub = struct.unpack(">HBB", binary[offset:offset+4])
             offset += 4
-            data = binary_data[offset:offset+reclen]
-
-            if rectype == 0 and recsub == 10:  # FAR
-                cpu_type = struct.unpack_from("B", data, 0)[0]
-                results.append({"TYPE": "FAR", "CPU_TYPE": cpu_type})
-
-            elif rectype == 1 and recsub == 10:  # MIR
-                test_time = struct.unpack_from("<I", data, 20)[0]
-                results.append({"TYPE": "MIR", "TEST_TIME": test_time})
-
-            elif rectype == 1 and recsub == 30:  # PCR
-                bin_count = struct.unpack_from("<H", data, 2)[0]
-                results.append({"TYPE": "PCR", "BIN_COUNT": bin_count})
-
-            elif rectype == 1 and recsub == 40:  # HBR
-                hard_bin_num = struct.unpack_from("<H", data, 0)[0]
-                results.append({"TYPE": "HBR", "HARD_BIN_NUM": hard_bin_num})
-
-            elif rectype == 5 and recsub == 10:  # PTR
-                test_num = struct.unpack_from("<H", data, 0)[0]
-                results.append({"TYPE": "PTR", "TEST_NUM": test_num})
-
-            elif rectype == 5 and recsub == 20:  # PRR
-                head_num, site_num, part_flg = struct.unpack_from("BBB", data, 0)
-                num_test = struct.unpack_from("<H", data, 3)[0]
-                x_coord = struct.unpack_from("<h", data, 5)[0]
-                y_coord = struct.unpack_from("<h", data, 7)[0]
-                test_t = struct.unpack_from("<I", data, 9)[0]
-                part_id_len = data[13]
-                part_id = data[14:14+part_id_len].decode(errors='ignore')
-                txt_start = 14 + part_id_len
-                part_txt_len = data[txt_start]
-                txt_end = txt_start + 1 + part_txt_len
-                soft_bin = struct.unpack_from("<H", data, txt_end)[0]
-                hard_bin = struct.unpack_from("<H", data, txt_end+2)[0]
-                results.append({
-                    "TYPE": "PRR",
-                    "HEAD_NUM": head_num,
-                    "SITE_NUM": site_num,
-                    "PART_ID": part_id,
-                    "X_COORD": x_coord,
-                    "Y_COORD": y_coord,
-                    "SOFT_BIN": soft_bin,
-                    "HARD_BIN": hard_bin
-                })
-
+            data = binary[offset:offset+reclen]
             offset += reclen
+
+            parsed = parse_record(rectype, recsub, data)
+            parsed_rows.append(parsed)
+            all_fields.update(parsed.keys())
         except Exception as e:
             print(f"⚠️ Error at offset {offset}: {e}")
             break
 
-    return results
+    all_fields = sorted(all_fields)
 
-def write_to_csv(results, output_path):
-    keys = sorted(set().union(*[r.keys() for r in results]))
-    with open(output_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=keys)
+    with open(output_csv, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=all_fields)
         writer.writeheader()
-        for row in results:
+        for row in parsed_rows:
             writer.writerow(row)
 
-if __name__ == "__main__":
-    binary = read_stdf_file("sample.stdf")
-    parsed_data = parse_stdf_records(binary)
-    write_to_csv(parsed_data, "parsed_output.csv")
-    print(f"✅ 已完成解析與輸出，共 {len(parsed_data)} 筆記錄。")
+    print(f"✅ 解析完成，共 {len(parsed_rows)} 筆記錄，輸出為 {output_csv}")
+
