@@ -14,12 +14,17 @@ record_map = {
     (1, 62): "PGR",
     (1, 70): "RDR",
     (1, 80): "SDR",
+    (1, 91): "GDR",
+    (1, 92): "DTR",
     (2, 10): "WIR",
     (2, 20): "WRR",
     (2, 30): "WCR",
     (5, 10): "PIR",
     (5, 20): "PRR",
+    (5, 30): "BPS",
+    (5, 40): "EPS",
     (10, 30): "TSR",
+    (15, 10): "FTR",
     (15, 15): "MPR",
 }
 
@@ -156,6 +161,42 @@ def parse_record(record_type, sub_type, data):
                 "RTN_CNT": rtn_cnt,
                 "RSLT_CNT": rslt_cnt
             })
+            
+        elif (record_type, sub_type) == (15, 10):  # FTR
+            test_num = struct.unpack(">I", data[0:4])[0]
+            head_num, site_num = struct.unpack("BB", data[4:6])
+            result = struct.unpack(">f", data[18:22])[0]
+            parsed.update({
+                "TEST_NUM": test_num,
+                "HEAD_NUM": head_num,
+                "SITE_NUM": site_num,
+                "RESULT": result
+            })
+
+        elif (record_type, sub_type) == (5, 30):  # BPS
+            parsed.update({
+                "INFO": "Begin Program Section"
+            })
+
+        elif (record_type, sub_type) == (5, 40):  # EPS
+            parsed.update({
+                "INFO": "End Program Section"
+            })
+
+        elif (record_type, sub_type) == (1, 91):  # GDR
+            field_count = struct.unpack(">H", data[0:2])[0]
+            parsed.update({
+                "GENERIC_FIELD_COUNT": field_count,
+                "INFO": "Generic Data Record"
+            })
+
+        elif (record_type, sub_type) == (1, 92):  # DTR
+            text_len = struct.unpack(">H", data[0:2])[0]
+            d_text = data[2:2+text_len].decode(errors="ignore")
+            parsed.update({
+                "DATALOG_TEXT": d_text
+            })
+
 
 
     except Exception as e:
