@@ -204,7 +204,8 @@ def parse_record(record_type, sub_type, data):
                 if len(data) >= 2 + text_len:
                     d_text = data[2:2+text_len].decode(errors="ignore")
                     parsed.update({"DATALOG_TEXT": d_text})
-
+        else:
+            parsed["NOTE"] = "Record type implemented without additional safety checks here."
 
 
     except Exception as e:
@@ -241,4 +242,4 @@ def parse_stdf(filepath, output_csv):
         for row in parsed_rows:
             writer.writerow(row)
 
-    print(f"✅ 解析完成，共 {len(parsed_rows)} 筆記錄，輸出為 {output_csv}")
+    print(f"✅ 解析完成，共 {len(parsed_rows)} 筆記錄，輸出為 {output_csv }")
