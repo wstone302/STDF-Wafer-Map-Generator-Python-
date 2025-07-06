@@ -14,7 +14,6 @@
 3. [`stdf_parser.py` 使用說明](#stdf_parserpy-使用說明)
 4. [`extract_prr.py` 使用說明](#extract_prrpy-使用說明)
 5. [範例](#範例)
-6. [授權](#授權)
 
 ---
 
