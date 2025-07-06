@@ -243,3 +243,10 @@ def parse_stdf(filepath, output_csv):
             writer.writerow(row)
 
     print(f"✅ 解析完成，共 {len(parsed_rows)} 筆記錄，輸出為 {output_csv }")
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) != 3:
+        print("用法: python stdf_parser.py <輸入STDF檔> <輸出CSV檔>")
+    else:
+        parse_stdf(sys.argv[1], sys.argv[2])
