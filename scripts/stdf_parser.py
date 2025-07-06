@@ -587,45 +587,61 @@ def parse_record(record_type, sub_type, data, current_endian):
 
         elif (record_type, sub_type) == (5, 20):  # PRR - Part Results Record
             print(f"DEBUG PRR: Data length {len(data)}, current offset {record_data_offset}")
-            if len(data) < 19: # 1+1+1+4+2+2+2+2+4 = 19 bytes fixed fields
+            # 固定欄位長度：1+1+1+2+2+2+2+2+4 = 17 bytes
+            if len(data) < 17:
                 parsed["ERROR"] = f"PRR record too short for fixed fields: {len(data)} bytes"
                 return parsed
 
             head_num = data[record_data_offset]
             record_data_offset += 1
             print(f"DEBUG PRR: Parsed HEAD_NUM, offset now {record_data_offset}")
+
             site_num = data[record_data_offset]
             record_data_offset += 1
             print(f"DEBUG PRR: Parsed SITE_NUM, offset now {record_data_offset}")
+
             part_flg = data[record_data_offset]
             record_data_offset += 1
             print(f"DEBUG PRR: Parsed PART_FLG, offset now {record_data_offset}")
-            num_test = struct.unpack(current_endian + "I", data[record_data_offset:record_data_offset+4])[0]
-            record_data_offset += 4
+
+            # NUM_TEST 應為 2 bytes 的 U*2
+            num_test = struct.unpack(current_endian + "H",
+                                    data[record_data_offset:record_data_offset+2])[0]
+            record_data_offset += 2
             print(f"DEBUG PRR: Parsed NUM_TEST, offset now {record_data_offset}")
-            hard_bin = struct.unpack(current_endian + "H", data[record_data_offset:record_data_offset+2])[0]
+
+            hard_bin = struct.unpack(current_endian + "H",
+                                    data[record_data_offset:record_data_offset+2])[0]
             record_data_offset += 2
             print(f"DEBUG PRR: Parsed HARD_BIN, offset now {record_data_offset}")
-            soft_bin = struct.unpack(current_endian + "H", data[record_data_offset:record_data_offset+2])[0]
+
+            soft_bin = struct.unpack(current_endian + "H",
+                                    data[record_data_offset:record_data_offset+2])[0]
             record_data_offset += 2
             print(f"DEBUG PRR: Parsed SOFT_BIN, offset now {record_data_offset}")
-            x_coord = struct.unpack(current_endian + "h", data[record_data_offset:record_data_offset+2])[0]
+
+            x_coord = struct.unpack(current_endian + "h",
+                                    data[record_data_offset:record_data_offset+2])[0]
             record_data_offset += 2
             print(f"DEBUG PRR: Parsed X_COORD, offset now {record_data_offset}")
-            y_coord = struct.unpack(current_endian + "h", data[record_data_offset:record_data_offset+2])[0]
+
+            y_coord = struct.unpack(current_endian + "h",
+                                    data[record_data_offset:record_data_offset+2])[0]
             record_data_offset += 2
             print(f"DEBUG PRR: Parsed Y_COORD, offset now {record_data_offset}")
-            test_t = struct.unpack(current_endian + "I", data[record_data_offset:record_data_offset+4])[0]
+
+            test_t = struct.unpack(current_endian + "I",
+                                    data[record_data_offset:record_data_offset+4])[0]
             record_data_offset += 4
             print(f"DEBUG PRR: Parsed TEST_T, offset now {record_data_offset}")
 
+            # Cn fields
             part_id, record_data_offset = parse_cn(data, record_data_offset, current_endian)
             print(f"DEBUG PRR: Parsed PART_ID '{part_id}', offset now {record_data_offset}")
             part_txt, record_data_offset = parse_cn(data, record_data_offset, current_endian)
             print(f"DEBUG PRR: Parsed PART_TXT '{part_txt}', offset now {record_data_offset}")
             part_fix, record_data_offset = parse_cn(data, record_data_offset, current_endian)
             print(f"DEBUG PRR: Parsed PART_FIX '{part_fix}', offset now {record_data_offset}")
-
 
             parsed.update({
                 "HEAD_NUM": head_num, "SITE_NUM": site_num, "PART_FLG": part_flg,
@@ -634,6 +650,7 @@ def parse_record(record_type, sub_type, data, current_endian):
                 "PART_ID": part_id, "PART_TXT": part_txt, "PART_FIX": part_fix
             })
             return parsed
+
 
         elif (record_type, sub_type) == (5, 30):  # BPS - Begin Program Section
             print(f"DEBUG BPS: Data length {len(data)}, current offset {record_data_offset}")
