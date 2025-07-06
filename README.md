@@ -4,7 +4,7 @@
 
 ---
 
-### 📁 資料夾結構
+### 資料夾結構
 
 ```
 HW/
@@ -23,7 +23,7 @@ HW/
 
 ---
 
-### 🧾 程式檔案與用途
+### 程式檔案與用途
 
 | 檔案名稱                | 位置                        | 功能說明                                                        |
 |-------------------------|-----------------------------|-----------------------------------------------------------------|
@@ -34,7 +34,7 @@ HW/
 
 ---
 
-### ▶️ 執行流程（支援兩種來源格式）
+### 執行流程（支援兩種來源格式）
 
 #### 方式一：以 `.std` ➝ `.txt`（需使用 pystdf）
 
@@ -49,7 +49,7 @@ python pystdf-master/pystdf/scripts/stdf2text.py ./unpacked/xxx.std > ./input/ou
 python scripts/main.py
 ```
 
-#### ✅ 方式二：以 Binary `.std` 直接解析（新功能）
+#### 方式二：以 Binary `.std` 直接解析（新功能）
 
 ```bash
 # 解析 Binary STDF 為 CSV
@@ -58,9 +58,9 @@ python scripts/stdf_parser.py ./unpacked/xxx.std ./input/parsed_output.csv
 
 ---
 
-## 📊 功能說明
+## 功能說明
 
-### 1️⃣ STDF Binary 解碼（stdf_parser.py）
+### 1 STDF Binary 解碼（stdf_parser.py）
 
 - 自行撰寫之 Binary 解碼器，解析以下記錄類型：
   - 基礎資訊：FAR、MIR、MRR、PCR、WIR、WRR、WCR
@@ -68,7 +68,7 @@ python scripts/stdf_parser.py ./unpacked/xxx.std ./input/parsed_output.csv
   - 分群資訊：SDR、RDR、TSR
 - 可輸出完整欄位對應的 CSV 檔案
 
-### 2️⃣ 主程式分析與繪圖（main.py）
+### 2️ 主程式分析與繪圖（main.py）
 
 - 解析 PRR 記錄，擷取晶粒之：
   - `X_COORD`、`Y_COORD`、`PART_ID`、`HARD_BIN`
@@ -79,7 +79,7 @@ python scripts/stdf_parser.py ./unpacked/xxx.std ./input/parsed_output.csv
 
 ---
 
-## 📂 輸出檔案
+## 輸出檔案
 
 | 檔案名稱                   | 說明                                                  |
 |----------------------------|-------------------------------------------------------|
@@ -91,7 +91,7 @@ python scripts/stdf_parser.py ./unpacked/xxx.std ./input/parsed_output.csv
 
 ---
 
-## 📐 良率計算方式
+## 良率計算方式
 
 ```text
 總晶粒數 = PRR 記錄數
@@ -101,7 +101,7 @@ python scripts/stdf_parser.py ./unpacked/xxx.std ./input/parsed_output.csv
 
 ---
 
-## 📦 依賴套件
+## 依賴套件
 
 ```bash
 pip install pandas matplotlib numpy
@@ -115,7 +115,7 @@ pip install pystdf
 
 ---
 
-## 📘 題目對應需求整理
+## 題目對應需求整理
 
 | 題目需求                  | 對應功能                                  |
 |---------------------------|--------------------------------------------|
