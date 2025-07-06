@@ -17,8 +17,10 @@ record_map = {
     (2, 10): "WIR",
     (2, 20): "WRR",
     (2, 30): "WCR",
-    (5, 10): "PTR",
+    (5, 10): "PIR",
     (5, 20): "PRR",
+    (10, 30): "TSR",
+    (15, 15): "MPR",
 }
 
 def parse_cn(data, offset):
@@ -125,6 +127,36 @@ def parse_record(record_type, sub_type, data):
                 "POS_X": pos_x,
                 "POS_Y": pos_y
             })
+        elif (record_type, sub_type) == (5, 10):  # PIR
+            head_num, site_num = struct.unpack("BB", data[0:2])
+            parsed.update({"HEAD_NUM": head_num, "SITE_NUM": site_num})
+
+        elif (record_type, sub_type) == (10, 30):  # TSR
+            head_num, site_num = struct.unpack("BB", data[0:2])
+            test_typ = chr(data[2])
+            test_num = struct.unpack(">I", data[3:7])[0]
+            exec_cnt = struct.unpack(">I", data[7:11])[0]
+            fail_cnt = struct.unpack(">I", data[11:15])[0]
+            alarm_cnt = struct.unpack(">I", data[15:19])[0]
+            parsed.update({
+                "HEAD_NUM": head_num, "SITE_NUM": site_num,
+                "TEST_TYP": test_typ, "TEST_NUM": test_num,
+                "EXEC_CNT": exec_cnt, "FAIL_CNT": fail_cnt, "ALARM_CNT": alarm_cnt
+            })
+
+        elif (record_type, sub_type) == (15, 15):  # MPR
+            test_num = struct.unpack(">I", data[0:4])[0]
+            head_num, site_num = struct.unpack("BB", data[4:6])
+            rtn_cnt = struct.unpack(">H", data[8:10])[0]
+            rslt_cnt = struct.unpack(">H", data[10:12])[0]
+            parsed.update({
+                "TEST_NUM": test_num,
+                "HEAD_NUM": head_num,
+                "SITE_NUM": site_num,
+                "RTN_CNT": rtn_cnt,
+                "RSLT_CNT": rslt_cnt
+            })
+
 
     except Exception as e:
         parsed["ERROR"] = str(e)
