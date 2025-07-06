@@ -41,7 +41,10 @@ def parse_record(record_type, sub_type, data):
     parsed = {"TYPE": record_map.get((record_type, sub_type), f"{record_type}:{sub_type}")}
     try:
         if (record_type, sub_type) == (0, 10):  # FAR
-            parsed.update({"CPU_TYPE": data[0], "STDF_VER": data[1]})
+            if len(data) >= 2:
+                parsed.update({"CPU_TYPE": data[0], "STDF_VER": data[1]})
+            else:
+                parsed["ERROR"] = "FAR record too short"
 
         elif (record_type, sub_type) == (1, 10):  # MIR
             if len(data) >= 29:
@@ -209,7 +212,9 @@ def parse_record(record_type, sub_type, data):
 
 
     except Exception as e:
+        print(f"❌ Error parsing ({record_type},{sub_type}) - {record_map.get((record_type, sub_type), 'Unknown')} - {e}")
         parsed["ERROR"] = str(e)
+
 
     return parsed
 
