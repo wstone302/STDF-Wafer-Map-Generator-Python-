@@ -19,6 +19,7 @@ record_map = {
     (2, 10): "WIR",
     (2, 20): "WRR",
     (2, 30): "WCR",
+    (5, 10): "PTR",
     (5, 10): "PIR",
     (5, 20): "PRR",
     (5, 30): "BPS",
@@ -29,9 +30,12 @@ record_map = {
 }
 
 def parse_cn(data, offset):
+    if offset >= len(data):
+        return "", offset
     length = data[offset]
-    val = data[offset+1:offset+1+length].decode(errors="ignore")
-    return val, offset + 1 + length
+    end = offset + 1 + length
+    val = data[offset+1:end].decode(errors="ignore") if end <= len(data) else ""
+    return val, end
 
 def parse_record(record_type, sub_type, data):
     parsed = {"TYPE": record_map.get((record_type, sub_type), f"{record_type}:{sub_type}")}
@@ -40,10 +44,14 @@ def parse_record(record_type, sub_type, data):
             parsed.update({"CPU_TYPE": data[0], "STDF_VER": data[1]})
 
         elif (record_type, sub_type) == (1, 10):  # MIR
-            tstamp = struct.unpack(">I", data[0:4])[0]
-            lot_id_len = data[28]
-            lot_id = data[29:29+lot_id_len].decode(errors="ignore")
-            parsed.update({"TIME_STAMP": tstamp, "LOT_ID": lot_id})
+            if len(data) >= 29:
+                tstamp = struct.unpack(">I", data[0:4])[0]
+                lot_id_len = data[28]
+                if len(data) >= 29 + lot_id_len:
+                    lot_id = data[29:29+lot_id_len].decode(errors="ignore")
+                    parsed.update({"TIME_STAMP": tstamp, "LOT_ID": lot_id})
+                else:
+                    parsed.update({"TIME_STAMP": tstamp})
 
         elif (record_type, sub_type) == (1, 30):  # PCR
             head_num, site_num = data[0], data[1]
@@ -61,13 +69,15 @@ def parse_record(record_type, sub_type, data):
             parsed.update({"TEST_NUM": test_num, "RESULT": result})
 
         elif (record_type, sub_type) == (5, 20):  # PRR
-            x_coord = struct.unpack(">h", data[5:7])[0]
-            y_coord = struct.unpack(">h", data[7:9])[0]
-            part_id_len = data[13]
-            part_id = data[14:14+part_id_len].decode(errors="ignore")
-            offset = 14 + part_id_len
-            soft_bin = struct.unpack(">H", data[offset:offset+2])[0]
-            parsed.update({"X_COORD": x_coord, "Y_COORD": y_coord, "PART_ID": part_id, "SOFT_BIN": soft_bin})
+            if len(data) >= 14:
+                x_coord = struct.unpack(">h", data[5:7])[0]
+                y_coord = struct.unpack(">h", data[7:9])[0]
+                part_id_len = data[13]
+                if len(data) >= 14 + part_id_len + 2:
+                    part_id = data[14:14+part_id_len].decode(errors="ignore")
+                    offset = 14 + part_id_len
+                    soft_bin = struct.unpack(">H", data[offset:offset+2])[0]
+                    parsed.update({"X_COORD": x_coord, "Y_COORD": y_coord, "PART_ID": part_id, "SOFT_BIN": soft_bin})
 
         elif (record_type, sub_type) == (0, 20):  # ATR
             mod_time = struct.unpack(">I", data[0:4])[0]
@@ -184,18 +194,16 @@ def parse_record(record_type, sub_type, data):
             })
 
         elif (record_type, sub_type) == (1, 91):  # GDR
-            field_count = struct.unpack(">H", data[0:2])[0]
-            parsed.update({
-                "GENERIC_FIELD_COUNT": field_count,
-                "INFO": "Generic Data Record"
-            })
+            if len(data) >= 2:
+                field_count = struct.unpack(">H", data[0:2])[0]
+                parsed.update({"GENERIC_FIELD_COUNT": field_count, "INFO": "Generic Data Record"})
 
         elif (record_type, sub_type) == (1, 92):  # DTR
-            text_len = struct.unpack(">H", data[0:2])[0]
-            d_text = data[2:2+text_len].decode(errors="ignore")
-            parsed.update({
-                "DATALOG_TEXT": d_text
-            })
+            if len(data) >= 2:
+                text_len = struct.unpack(">H", data[0:2])[0]
+                if len(data) >= 2 + text_len:
+                    d_text = data[2:2+text_len].decode(errors="ignore")
+                    parsed.update({"DATALOG_TEXT": d_text})
 
 
 
