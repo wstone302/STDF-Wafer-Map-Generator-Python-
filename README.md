@@ -1,126 +1,97 @@
-# STDF Wafer Map Analysis Tool
+# STDF Parser 工具套件
 
-本工具用於解析 STDF 測試檔案，支援二進位 `.std` 格式與純文字 `.txt` 格式。可擷取所有晶粒的座標與編號資訊，並繪製 Wafer Map、自動計算良率、匯出圖表與 Excel 結果。
+這個專案包含兩支 Python 腳本，用於解析 STDF (Standard Test Data Format) 測試資料，並將結果匯出成 CSV：
 
----
-
-### 資料夾結構
-
-```
-HW/
-├── README.md                      # 使用說明文件（Markdown）
-├── README.pdf                     # 使用說明文件（PDF）
-├── scripts/                       # 主程式與輔助腳本
-│   ├── unpack_and_prepare.py      # 解壓 .tar.gz 檔案
-│   ├── main.py                    # 主程式：Wafer Map 與良率統計
-│   └── stdf_parser.py             # STDF 二進位解析模組（含 PRR、FAR、MIR 等）
-├── input/                         # 經轉換後之 STDF 純文字或 JSON 格式資料
-├── output/                        # Wafer Map 圖片與良率統計資料
-├── unpacked/                      # 原始 STDF 檔案解壓後資料
-├── reference/                     # 參考資料
-└── pystdf-master/                 # 第三方 STDF 解析套件（文字格式）
-```
+* `scripts/stdf_parser.py`：完整解析所有 STDF 記錄，輸出所有欄位的 CSV。
+* `scripts/extract_prr.py`：專門抓取 PRR (Part Results Record) 記錄中的 X、Y 座標與 PART\_ID，輸出簡易 CSV。
 
 ---
 
-### 程式檔案與用途
+## 目錄
 
-| 檔案名稱                | 位置                        | 功能說明                                                        |
-|-------------------------|-----------------------------|-----------------------------------------------------------------|
-| `unpack_and_prepare.py` | `./scripts/`                | 解壓 `.tar.gz` 檔案並輸出至 `./unpacked/`                       |
-| `stdf2text.py`          | `./pystdf-master/.../`      | 將 `.std` 轉為文字格式 `.txt`，輸出至 `./input/output.txt`     |
-| `main.py`               | `./scripts/`                | 主程式：產出 Wafer Map 與良率統計檔案                           |
-| `stdf_parser.py`        | `./scripts/`                | **新功能：直接解析 STDF Binary 檔，產出結構化 CSV**            |
+1. [環境與相依套件](#環境與相依套件)
+2. [程式結構](#程式結構)
+3. [`stdf_parser.py` 使用說明](#stdf_parserpy-使用說明)
+4. [`extract_prr.py` 使用說明](#extract_prrpy-使用說明)
+5. [範例](#範例)
+6. [授權](#授權)
 
 ---
 
-### 執行流程（支援兩種來源格式）
+## 環境與相依套件
 
-#### 方式一：以 `.std` ➝ `.txt`（需使用 pystdf）
+* Python 3.7+
+* 無其他第三方套件需求（僅使用標準函式庫 `struct`, `csv`）。
+
+建議建立虛擬環境並安裝相應 Python 版本：
 
 ```bash
-# Step 1: 解壓 STDF 壓縮檔
-python scripts/unpack_and_prepare.py
-
-# Step 2: 將 .std 轉為純文字格式
-python pystdf-master/pystdf/scripts/stdf2text.py ./unpacked/xxx.std > ./input/output.txt
-
-# Step 3: 執行主程式分析與繪圖
-python scripts/main.py
+python3 -m venv venv
+source venv/bin/activate  # Linux/macOS
+venv\Scripts\activate   # Windows
 ```
 
-#### 方式二：以 Binary `.std` 直接解析（新功能）
+---
+
+## 程式結構
+
+```
+project_root/
+├── scripts/
+│   ├── stdf_parser.py      # 全量解析器
+│   └── extract_prr.py      # PRR 抽取器
+└── README.md               # 使用說明文件
+```
+
+---
+
+## `stdf_parser.py` 使用說明
+
+此腳本可對整支 STDF 檔案做全面解析，將所有記錄、所有欄位寫入 CSV。
 
 ```bash
-# 解析 Binary STDF 為 CSV
-python scripts/stdf_parser.py ./unpacked/xxx.std ./input/parsed_output.csv
+python scripts/stdf_parser.py <輸入.STDF> <輸出.csv>
 ```
 
----
+### 參數說明
 
-## 功能說明
+* `<輸入.STDF>`：要解析的 STDF 二進位檔案路徑。
+* `<輸出.csv>`：解析結果要寫入的 CSV 檔案路徑。
 
-### 1 STDF Binary 解碼（stdf_parser.py）
-
-- 自行撰寫之 Binary 解碼器，解析以下記錄類型：
-  - 基礎資訊：FAR、MIR、MRR、PCR、WIR、WRR、WCR
-  - 晶粒測試資訊：PIR、PTR、PRR、FTR、MPR
-  - 分群資訊：SDR、RDR、TSR
-- 可輸出完整欄位對應的 CSV 檔案
-
-### 2️ 主程式分析與繪圖（main.py）
-
-- 解析 PRR 記錄，擷取晶粒之：
-  - `X_COORD`、`Y_COORD`、`PART_ID`、`HARD_BIN`
-- 畫出 Wafer Map：
-  - `wafer_map_part_id.png`：依據編號顯示晶粒位置
-  - `wafer_map_bin.png`：依據 BIN 顏色標示晶粒分類
-- 自動統計良率並輸出 `.txt` 與 `.xlsx` 結果
+執行後會顯示端序偵測與每筆記錄解析日誌，最後輸出完整 CSV。
 
 ---
 
-## 輸出檔案
+## `extract_prr.py` 使用說明
 
-| 檔案名稱                   | 說明                                                  |
-|----------------------------|-------------------------------------------------------|
-| `wafer_map_data.xlsx`      | 含 X, Y, PART_ID, BIN 的詳細表格                      |
-| `wafer_map_part_id.png`    | Wafer Map（以晶粒編號顯示）                          |
-| `wafer_map_bin.png`        | Wafer Map（以測試分類 BIN 顏色區分）                |
-| `wafer_yield_summary.txt`  | 良率統計摘要（總晶粒數、通過數、良率百分比）        |
-| `parsed_output.csv`        | STDF Binary 解析後的完整結構欄位                    |
+此腳本專門掃描 STDF 中所有 PRR (Type=5, SubType=20) 記錄，僅提取：
 
----
-
-## 良率計算方式
-
-```text
-總晶粒數 = PRR 記錄數
-通過數量 = BIN == 1
-良率 (%) = (PASS Count / Total Chips) × 100%
-```
-
----
-
-## 依賴套件
+* `X_COORD`: 測試點 X 座標
+* `Y_COORD`: 測試點 Y 座標
+* `PART_ID`: 測試點 ID
 
 ```bash
-pip install pandas matplotlib numpy
+python scripts/extract_prr.py <輸入.STDF> <輸出_prr.csv>
 ```
 
-若使用 `pystdf`（文字格式解析）：
+### 參數說明
+
+* `<輸入.STDF>`：要掃描的 STDF 檔案。
+* `<輸出_prr.csv>`：PRR 結果的 CSV 檔案路徑。
+
+執行後會輸出 CSV，欄位僅含 `X_COORD, Y_COORD, PART_ID`，方便後續製作 wafer map。
+
+---
+
+## 範例
 
 ```bash
-pip install pystdf
+# 全量解析
+python scripts/stdf_parser.py unpacked/main_Lot_1_Wafer_1_Oct_13_09h33m41s_STDF output/full.csv
+
+# 單獨抽 PRR
+python scripts/extract_prr.py unpacked/main_Lot_1_Wafer_1_Oct_13_09h33m41s_STDF output/prr.csv
 ```
 
 ---
 
-## 題目對應需求整理
-
-| 題目需求                  | 對應功能                                  |
-|---------------------------|--------------------------------------------|
-| 解壓 `.tar.gz`            | `unpack_and_prepare.py` 處理雙層壓縮       |
-| 解析 STDF 二進位資料      | `stdf_parser.py` 全自製 Binary 解析器     |
-| 擷取晶粒資訊              | PRR 欄位分析與 Wafer Map 圖片標註         |
-| 畫出 PART_ID / BIN 圖     | `main.py` 輸出 PNG                        |
-| 統計良率並產出 Excel      | `wafer_map_data.xlsx` / `wafer_yield_summary.txt` |
