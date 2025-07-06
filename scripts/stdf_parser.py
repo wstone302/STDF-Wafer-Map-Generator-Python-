@@ -20,7 +20,7 @@ record_map = {
     (2, 20): "WRR",
     (2, 30): "WCR",
     (5, 10): "PTR",
-    (5, 10): "PIR",
+    (5, 15): "PIR",
     (5, 20): "PRR",
     (5, 30): "BPS",
     (5, 40): "EPS",
@@ -142,7 +142,7 @@ def parse_record(record_type, sub_type, data):
                 "POS_X": pos_x,
                 "POS_Y": pos_y
             })
-        elif (record_type, sub_type) == (5, 10):  # PIR
+        elif (record_type, sub_type) == (5, 15):  # PIR
             head_num, site_num = struct.unpack("BB", data[0:2])
             parsed.update({"HEAD_NUM": head_num, "SITE_NUM": site_num})
 
