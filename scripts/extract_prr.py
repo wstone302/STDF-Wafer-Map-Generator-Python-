@@ -22,22 +22,19 @@ def detect_endian(binary):
 def parse_prr_fields(data, endian):
     """只解析 PRR 固定欄位：X_COORD, Y_COORD, PART_ID"""
     off = 0
-    # 跳過前三個 U1
+    # 跳過 HEAD_NUM(1), SITE_NUM(1), PART_FLG(1)
     off += 3
-    # NUM_TEST: U2
-    off += 2
-    # HARD_BIN, SOFT_BIN, X/Y_COORD, TEST_T
-    # X_COORD: signed U2
-    off += 2 + 2  # hard+soft
+    # 跳過 NUM_TEST (2), HARD_BIN(2), SOFT_BIN(2)
+    off += 2 + 2 + 2
+    # X/Y_COORD 各 2 bytes
     x_coord = struct.unpack(endian + "h", data[off:off+2])[0]
     off += 2
     y_coord = struct.unpack(endian + "h", data[off:off+2])[0]
     off += 2
-    # 跳過 TEST_T U4
+    # 跳過 TEST_T (4)
     off += 4
 
-    # 接下來就是 Cn 欄位：PART_ID
-    # Cn 前先讀長度 U1
+    # PART_ID (Cn)
     length = struct.unpack(endian + "B", data[off:off+1])[0]
     off += 1
     part_id = data[off:off+length].decode(errors="ignore")
@@ -50,27 +47,25 @@ def extract_prr_records(stdf_path):
         binary = f.read()
 
     endian = detect_endian(binary)
-    print(f"使用端序: {endian!r}")
+    print(f"使用端序: {endian}")
 
     offset = 0
     prr_list = []
 
-    # 如果有 FAR 標頭，可以先把它跳過
-    # 假設 FAR 長度不超過 255
-    _, rectype, recsub = struct.unpack(endian + "HBB", binary[0:4])
-    reclen = struct.unpack(endian + "H", binary[0:2])[0]
+    # 跳過 FAR
+    reclen, rectype, recsub = struct.unpack(endian + "HBB", binary[0:4])
     if (rectype, recsub) == (0, 10):
         offset = 4 + reclen
 
     # 主迴圈
     while offset + 4 <= len(binary):
-        reclen, rectype, recsub = struct.unpack(endian + "HBB", binary[offset:offset+4])
+        reclen, rectype, recsub = struct.unpack(endian + "HBB",
+                                                binary[offset:offset+4])
         offset += 4
         data = binary[offset:offset+reclen]
 
         if (rectype, recsub) == (5, 20):
-            prr = parse_prr_fields(data, endian)
-            prr_list.append(prr)
+            prr_list.append(parse_prr_fields(data, endian))
 
         offset += reclen
 
@@ -86,12 +81,17 @@ if __name__ == "__main__":
     csv_file  = sys.argv[2]
 
     records = extract_prr_records(stdf_file)
-    print(f"共抽出 {len(records)} 筆 PRR 記錄")
+    print(f"\n共抽出 {len(records)} 筆 PRR 記錄\n")
 
-    # 輸出成 CSV
+    # —— 1) 文字列表輸出，格式如範例 —— #
+    # Ex: x=1 y=1 and part ID=1
+    for rec in records:
+        print(f"x={rec['X_COORD']} y={rec['Y_COORD']} and part ID={rec['PART_ID']}")
+
+    # —— 2) 同時寫入 CSV（如不需要可整個拿掉下面區塊） —— #
     with open(csv_file, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=["X_COORD","Y_COORD","PART_ID"])
         writer.writeheader()
         writer.writerows(records)
 
-    print(f"已寫入 {csv_file}")
+    print(f"\n已寫入 {csv_file}")
