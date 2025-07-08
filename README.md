@@ -2,8 +2,10 @@
 
 這個專案包含兩支 Python 腳本，用於解析 STDF (Standard Test Data Format) 測試資料，並將結果匯出成 CSV：
 
-* `scripts/stdf_parser.py`：完整解析所有 STDF 記錄，輸出所有欄位的 CSV。
+* `scripts/unpack_and_prepare.py`：將 .tar.gz 解壓縮至指定檔案(.stdf) 。
+* `scripts/stdf_parser.py`：完整解析所有 STDF 記*錄，輸出所有欄位的 CSV。
 * `scripts/extract_prr.py`：專門抓取 PRR (Part Results Record) 記錄中的 X、Y 座標與 PART\_ID，輸出簡易 CSV。
+* `scripts/format_prr_with_list.py`：將 extract_prr.py 生成出來的 CSV 畫成指定之 wafer map。
 
 ---
 
@@ -19,15 +21,15 @@
 
 ## 環境與相依套件
 
-* Python 3.7+
-* 無其他第三方套件需求（僅使用標準函式庫 `struct`, `csv`）。
+* Python 3.8+
+* pandas
 
-建議建立虛擬環境並安裝相應 Python 版本：
+建立虛擬環境並安裝相應 Python 版本：
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # Linux/macOS
-venv\Scripts\activate   # Windows
+conda create -n <your_env_name> python=3.11 -y
+conda activate your_env_name 
+pip install pandas 
 ```
 
 ---
@@ -37,9 +39,11 @@ venv\Scripts\activate   # Windows
 ```
 project_root/
 ├── scripts/
-│   ├── stdf_parser.py      # 全量解析器
-│   └── extract_prr.py      # PRR 抽取器
-└── README.md               # 使用說明文件
+│   ├── unpack_and_prepare.py     # 解壓縮 
+│   ├── stdf_parser.py            # 二進位轉換
+│   ├── extract_prr.py            # PRR 轉換
+│   └── format_prr_with_list.py   # 生成 wafer map
+└── README.md                     # 使用說明文件
 ```
 
 ---
@@ -85,11 +89,17 @@ python scripts/extract_prr.py <輸入.STDF> <輸出_prr.csv>
 ## 範例
 
 ```bash
-# 全量解析
+# 解壓縮 .tar.gz
+python scripts/unpack_and_prepare.py
+
+# 二進位轉換
 python scripts/stdf_parser.py unpacked/main_Lot_1_Wafer_1_Oct_13_09h33m41s_STDF output/full.csv
 
 # 單獨抽 PRR
 python scripts/extract_prr.py unpacked/main_Lot_1_Wafer_1_Oct_13_09h33m41s_STDF output/prr.csv
+
+# 生成 wafer map
+python scripts/format_prr_with_list.py
 ```
 
 ---
