@@ -4,8 +4,8 @@ import tarfile
 import os
 
 # === 檔案與資料夾路徑 ===
-input_gz_path = "./main_Lot_1_Wafer_1_Oct_13_09h33m41s_STDF.tar.gz"
-intermediate_tar_path = "./temp_stdf.tar"
+input_gz_path = "./input/main_Lot_1_Wafer_1_Oct_13_09h33m41s_STDF.tar.gz"
+intermediate_tar_path = "./input/temp_stdf.tar"
 unpack_dir = "./unpacked"
 
 # === Step 1: 解壓 .gz 成 .tar ===
